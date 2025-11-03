@@ -7,7 +7,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configure OpenAI API
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Try Streamlit secrets first, then environment variables
+try:
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
+except:
+    openai.api_key = os.getenv("OPENAI_API_KEY")
 
 st.title("🤖 Streamlit LLM App")
 st.write("OpenAI APIを使ったチャットアプリケーション")
