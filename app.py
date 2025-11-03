@@ -3,25 +3,14 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables for local development
 load_dotenv()
 
-# Configure OpenAI client
-# Try Streamlit secrets first, then environment variables
-api_key = None
-try:
-    api_key = st.secrets["OPENAI_API_KEY"]
-    st.sidebar.success("✅ APIキーをSecretsから読み込みました")
-except Exception as e:
-    st.sidebar.warning(f"⚠️ Secretsからの読み込み失敗: {str(e)}")
-    api_key = os.getenv("OPENAI_API_KEY")
-    if api_key:
-        st.sidebar.info("✅ APIキーを環境変数から読み込みました")
-    else:
-        st.sidebar.error("❌ APIキーが見つかりません")
+# ✅ Secrets からキーを取得
+api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
 if not api_key:
-    st.error("🔑 OpenAI APIキーが設定されていません")
+    st.error("🔑 OpenAI APIキーが見つかりません。Secretsの設定を確認してください。")
     st.info("Streamlit Community Cloudをお使いの場合:")
     st.code("""
 アプリの設定 > Secrets で以下を追加してください:
@@ -29,13 +18,13 @@ if not api_key:
 OPENAI_API_KEY = "your-api-key-here"
     """)
     st.stop()
-
-try:
-    client = OpenAI(api_key=api_key)
-    st.sidebar.success("✅ OpenAIクライアント初期化完了")
-except Exception as e:
-    st.error(f"❌ OpenAIクライアント初期化エラー: {str(e)}")
-    st.stop()
+else:
+    try:
+        client = OpenAI(api_key=api_key)
+        st.success("✅ OpenAI APIキーが正しく読み込まれました！")
+    except Exception as e:
+        st.error(f"❌ OpenAIクライアント初期化エラー: {str(e)}")
+        st.stop()
 
 st.title("🤖 Streamlit LLM App")
 st.write("OpenAI APIを使ったチャットアプリケーション")
@@ -71,5 +60,20 @@ if prompt := st.chat_input("何か質問してください..."):
             # Add assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": assistant_response})
         except Exception as e:
-            st.error(f"エラーが発生しました: {str(e)}")
-            st.error("OpenAI APIキーが正しく設定されているか確認してください。")
+            error_message = str(e)
+            st.error(f"❌ エラーが発生しました: {error_message}")
+            
+            # 具体的なエラー種別に応じたガイダンス
+            if "429" in error_message or "quota" in error_message.lower():
+                st.warning("🚨 **API利用制限エラー (Error 429)**")
+                st.info("""
+**解決方法:**
+1. OpenAI Platform (https://platform.openai.com/usage) で使用量を確認
+2. 請求設定 (https://platform.openai.com/account/billing) でクレジットを追加
+3. 月次リセットまで待機（無料枠の場合）
+4. 新しいOpenAIアカウントで別のAPIキーを取得
+                """)
+            elif "401" in error_message:
+                st.info("🔑 APIキーが無効または期限切れです。新しいキーを生成してください。")
+            else:
+                st.info("🔧 一時的な問題の可能性があります。しばらく待ってから再試行してください。")
