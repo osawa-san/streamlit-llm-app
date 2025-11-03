@@ -8,12 +8,34 @@ load_dotenv()
 
 # Configure OpenAI client
 # Try Streamlit secrets first, then environment variables
+api_key = None
 try:
     api_key = st.secrets["OPENAI_API_KEY"]
-except:
+    st.sidebar.success("✅ APIキーをSecretsから読み込みました")
+except Exception as e:
+    st.sidebar.warning(f"⚠️ Secretsからの読み込み失敗: {str(e)}")
     api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        st.sidebar.info("✅ APIキーを環境変数から読み込みました")
+    else:
+        st.sidebar.error("❌ APIキーが見つかりません")
 
-client = OpenAI(api_key=api_key)
+if not api_key:
+    st.error("🔑 OpenAI APIキーが設定されていません")
+    st.info("Streamlit Community Cloudをお使いの場合:")
+    st.code("""
+アプリの設定 > Secrets で以下を追加してください:
+
+OPENAI_API_KEY = "your-api-key-here"
+    """)
+    st.stop()
+
+try:
+    client = OpenAI(api_key=api_key)
+    st.sidebar.success("✅ OpenAIクライアント初期化完了")
+except Exception as e:
+    st.error(f"❌ OpenAIクライアント初期化エラー: {str(e)}")
+    st.stop()
 
 st.title("🤖 Streamlit LLM App")
 st.write("OpenAI APIを使ったチャットアプリケーション")
