@@ -1,17 +1,19 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 import os
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Configure OpenAI API
+# Configure OpenAI client
 # Try Streamlit secrets first, then environment variables
 try:
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
+    api_key = st.secrets["OPENAI_API_KEY"]
 except:
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
+
+client = OpenAI(api_key=api_key)
 
 st.title("🤖 Streamlit LLM App")
 st.write("OpenAI APIを使ったチャットアプリケーション")
@@ -35,7 +37,7 @@ if prompt := st.chat_input("何か質問してください..."):
     # Generate response
     with st.chat_message("assistant"):
         try:
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": m["role"], "content": m["content"]}
